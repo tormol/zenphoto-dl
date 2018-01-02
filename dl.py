@@ -98,27 +98,31 @@ def crawl_album(url, path, indent=""):
 	for html_url, alt in images:
 		# the alt text only sometimes contain file type, so is not enough on it's own
 		name = alt.rpartition(".")[0]
-		img_url_i, img_name_i, img_ext_i = parse_img_page(html_url)
+		#img_url_i, img_name_i, img_ext_i = parse_img_page(html_url)
 		img_url_c, img_name_c, img_ext_c = get_img_url(html_url)
-		if img_url_i is not None and (not img_url_i.startswith(img_url_c) or img_name_i != img_name_c or img_ext_i != img_ext_c):
-			print("%sbug for %s (%s)" % (indent, name, html_url))
-			print("%s  indirect: %s.%s (%s)" % (indent, img_name_i, img_ext_i, img_url_i))
-			print("%s  converted: %s.%s (%s)" % (indent, img_name_c, img_ext_c, img_url_c))
-			os.abort()
-		elif alt != img_name_c and alt != img_name_c+"."+img_ext_c:
+		#if img_url_i is not None and (not img_url_i.startswith(img_url_c) or img_name_i != img_name_c or img_ext_i != img_ext_c):
+		#	print("%sbug for %s (%s)" % (indent, name, html_url))
+		#	print("%s  indirect: %s.%s (%s)" % (indent, img_name_i, img_ext_i, img_url_i))
+		#	print("%s  converted: %s.%s (%s)" % (indent, img_name_c, img_ext_c, img_url_c))
+		#	os.abort()
+		if alt != img_name_c and alt != img_name_c+"."+img_ext_c:
 			print("%salt difference: %s != %s(.%s)" % (indent, alt, img_name_c, img_ext_c))
 			os.abort()
 		img_path = os.path.join(path, img_name_c+"."+img_ext_c.lower())
-		print("%s  dry %s" % (indent, img_path))
-		#download(img_url, to=img_path)
+		#print("%s  dry %s" % (indent, img_path))
+		download(img_url_c, to=img_path)
 	for album in sub_albums:
 		apath = os.path.join(path, album["title"])
-		if not os.path.exists(apath):
-			#os.makedirs(apath, mode=0o755)
-			print("%s  dry mkdir %s" % (indent, apath))
+		try:
+			os.makedirs(apath, mode=0o755)
+		except FileExistsError:
+			pass
 		if album["thumb"] is not None:
 			ext = album["thumb"].rpartition(".")[2]
 			thumb_path = os.path.join(apath, album["title"]+"."+ext)
+			# skip thumbnail because they're frequently broken,
+			# appears to be automatically choosen,
+			# and file explorers probably do a better job
 			#download(album["thumb"], to=thumb_path)
 		crawl_album(album["url"], apath, indent+"  ")
 
