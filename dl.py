@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-import sys, os, io, time
-import json
-import urllib.request
+import os, io, time
+import urllib.request, urllib.parse
 import lxml, lxml.html, lxml.etree
 html_parser = lxml.etree.HTMLParser(remove_blank_text=True, remove_comments=False, no_network=True)
 
@@ -25,7 +24,7 @@ def download(url, keep_params=True, to=None, default_dir="website_html", keep_do
     if not exists:
         print("<  "+url)
         print(">  "+to)
-        time.sleep(2) # good bot
+        time.sleep(1) # not so good bot
         try:
             urllib.request.urlretrieve(url, to)
         except urllib.error.HTTPError as err:
@@ -45,10 +44,7 @@ def get_html(url):
 
 def get_img_url(page_url):
 	_page, _, params = page_url.partition("?")
-	p = {}
-	for kv in params.split("&"):
-		k, _, v = kv.partition("=")
-		p[k] = v
+	p = dict(urllib.parse.parse_qsl(params))
 	img_url = base_url+"/zp-core/i.php?a="+p["album"]+"&i="+p["image"]
 	name, _, ext = p["image"].rpartition(".")
 	#path = p["album"].replace("/", os.path.sep)+os.path.sep+p["image"]
@@ -112,12 +108,14 @@ def crawl_album(url, path, indent=""):
 		elif alt != img_name_c and alt != img_name_c+"."+img_ext_c:
 			print("%salt difference: %s != %s(.%s)" % (indent, alt, img_name_c, img_ext_c))
 			os.abort()
-		img_path = os.path.join(path, img_name_c)
+		img_path = os.path.join(path, img_name_c+"."+img_ext_c.lower())
+		print("%s  dry %s" % (indent, img_path))
 		#download(img_url, to=img_path)
 	for album in sub_albums:
 		apath = os.path.join(path, album["title"])
-		#if not os.path.exists(apath):
-		#	os.makedirs(apath, mode=0o755)
+		if not os.path.exists(apath):
+			#os.makedirs(apath, mode=0o755)
+			print("%s  dry mkdir %s" % (indent, apath))
 		if album["thumb"] is not None:
 			ext = album["thumb"].rpartition(".")[2]
 			thumb_path = os.path.join(apath, album["title"]+"."+ext)
