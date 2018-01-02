@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 -u
 import os, io, time
 import urllib.request, urllib.parse
 import lxml, lxml.html, lxml.etree
