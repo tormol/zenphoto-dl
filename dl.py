@@ -24,7 +24,7 @@ def download(url, keep_params=True, to=None, default_dir="website_html", keep_do
     if not exists:
         print("<  "+url)
         print(">  "+to)
-        time.sleep(1) # not so good bot
+        time.sleep(2) # good bot
         try:
             urllib.request.urlretrieve(url, to)
         except urllib.error.HTTPError as err:
@@ -43,32 +43,16 @@ def get_html(url):
 	return html.getroot()
 
 def get_img_url(page_url):
+	p = {}
+	# split params withour url decoding them
 	_page, _, params = page_url.partition("?")
-	p = dict(urllib.parse.parse_qsl(params))
-	img_url = base_url+"/zp-core/i.php?a="+p["album"]+"&i="+p["image"]
-	name, _, ext = p["image"].rpartition(".")
-	#path = p["album"].replace("/", os.path.sep)+os.path.sep+p["image"]
+	for kv in params.split("&"):
+		k, _, v = kv.partition("=")
+		p[k] = v.replace("+", "%20")
+	#p = dict(urllib.parse.parse_qsl(params))
+	img_url = base_url+"/albums/"+p["album"]+"/"+p["image"]
+	name, _, ext = urllib.parse.unquote(p["image"]).rpartition(".")
 	return img_url, name, ext
-#<  http://archives.pawpet.tv/index.php?album=2004/2004-02-29&image=poink_Zoid.jpg
-#<  http://archives.pawpet.tv/zp-core/i.php?a=2004/2004-02-29&i=poink_Zoid.jpg&q=85&wmk=!&check=3282854b573eb2f8231c137ab898e401822bf07e
-
-def parse_img_page(html_url):
-	html = get_html(html_url)
-	try:
-		img = html.cssselect("#image img")[0]
-		orig_size = html.cssselect("input#sx")[0]# a radio button with onclick
-	except IndexError:
-		print("\tbad indirect page", html_url)
-		return None, None, None
-	name = img.get("alt")
-	url = base_url + orig_size.get("url")
-	ext = url.rpartition(".")[2].partition("&")[0]
-	if name.endswith(ext):
-		name = name[:-(len(ext)+1)]
-	return url, name, ext
-	#for size in html.cssselect("input"):
-	#	url = size.get("url")
-	#	px = size.get("id").strip("s px")
 
 def parse_index(html):
 	"""returns [{url:,title:,thumb:}], [(url,name)]"""
@@ -89,12 +73,14 @@ def parse_index(html):
 		imgname = imglink.get("title")
 		images.append((imgpage,imgname))
 		
-	return albums, images
+	next = html.cssselect("ul.pagelist li.next a")
+	next = None if len(next) == 0 else base_url + next[0].get("href")
+
+	return albums, images, next
 
 def crawl_album(url, path, indent=""):
-	print("%salbum %s (%s) ..." % (indent, path, url))
 	html = get_html(url)
-	sub_albums, images = parse_index(html)
+	sub_albums, images, next_page = parse_index(html)
 	for html_url, alt in images:
 		# the alt text only sometimes contain file type, so is not enough on it's own
 		name = alt.rpartition(".")[0]
@@ -105,9 +91,13 @@ def crawl_album(url, path, indent=""):
 		#	print("%s  indirect: %s.%s (%s)" % (indent, img_name_i, img_ext_i, img_url_i))
 		#	print("%s  converted: %s.%s (%s)" % (indent, img_name_c, img_ext_c, img_url_c))
 		#	os.abort()
-		if alt != img_name_c and alt != img_name_c+"."+img_ext_c:
-			print("%salt difference: %s != %s(.%s)" % (indent, alt, img_name_c, img_ext_c))
-			os.abort()
+		if alt.endswith("."+img_ext_c):
+			alt = alt[:-(1+len(img_ext_c))]
+		if alt != img_name_c:
+			print("%salt difference: %s != %s" % (indent, alt, img_name_c))
+			#os.abort()
+		# img_name_ext is at least unique, and while it might contain noise,
+		# it doesn't crap out completely with $camera_model
 		img_path = os.path.join(path, img_name_c+"."+img_ext_c.lower())
 		#print("%s  dry %s" % (indent, img_path))
 		download(img_url_c, to=img_path)
@@ -124,10 +114,14 @@ def crawl_album(url, path, indent=""):
 			# appears to be automatically choosen,
 			# and file explorers probably do a better job
 			#download(album["thumb"], to=thumb_path)
+		print("%salbum %s (%s) ..." % (indent, apath, album["url"]))
 		crawl_album(album["url"], apath, indent+"  ")
+	if next_page is not None:
+		print("%snext page for %s ..." % (indent, path))
+		crawl_album(next_page, path, indent)
 
 try:
 	os.makedirs("website_html", mode=0o755)
 except FileExistsError:
 	pass
-crawl_album(base_url+"/index.php", ".")
+crawl_album(base_url+"/index.php", "")
