@@ -1,4 +1,4 @@
-#!/usr/bin/env python3 -u
+#!/usr/bin/env python3
 
 # MIT License
 #
@@ -49,13 +49,13 @@ def download(url, keep_params=True, to=None, default_dir="website_html", keep_do
 	exists = os.path.isfile(to)
 	if not exists:
 		print("<  "+url)
-		print(">  "+to)
+		print(">  "+to, flush=True)
 		time.sleep(2) # good bot
 		try:
 			urllib.request.urlretrieve(url, to)
 		except urllib.error.HTTPError as err:
 			if err.code == 404:
-				print("\tNOT FOUND")
+				print("\tNOT FOUND", flush=True)
 				return None, False
 			else:
 				raise err
@@ -121,7 +121,7 @@ def crawl_album(url, path, indent=""):
 		if alt.endswith("."+img_ext_c):
 			alt = alt[:-(1+len(img_ext_c))]
 		if alt != img_name_c:
-			print("%salt difference: %s != %s" % (indent, alt, img_name_c))
+			print("%salt difference: %s != %s" % (indent, alt, img_name_c), flush=True)
 			#os.abort()
 		# img_name_ext is at least unique, and while it might contain noise,
 		# it doesn't crap out completely with $camera_model
@@ -141,10 +141,10 @@ def crawl_album(url, path, indent=""):
 			# appears to be automatically choosen,
 			# and file explorers probably do a better job
 			#download(album["thumb"], to=thumb_path)
-		print("%salbum %s (%s) ..." % (indent, apath, album["url"]))
+		print("%salbum %s (%s) ..." % (indent, apath, album["url"]), flush=True)
 		crawl_album(album["url"], apath, indent+"  ")
 	if next_page is not None:
-		print("%snext page for %s ..." % (indent, path))
+		print("%snext page for %s ..." % (indent, path), flush=True)
 		crawl_album(next_page, path, indent)
 
 
