@@ -1,0 +1,5 @@
+# Invert to not track stuff that has been dowloaded into the current directory.
+*
+!*.py
+!.gitignore
+!README.md
