@@ -39,8 +39,10 @@ def download(url, keep_params=True, to=None, default_dir="website_html", keep_do
 		#name = url.rsplit("/", 1)[1] # strip path
 		if not keep_domain:
 			_domain, _, name = name.partition("/")
-		name = name.rstrip("/") # remove trailing slash
-		name = name.replace("/", "--") # make it a valid linux filename that doesn't confuse firefox (it treats \ as /)
+		# remove trailing slash and replace others with --
+		# firefox on linux for some reason treats \ as /, so can't use \ even
+		# if the file system supports it.
+		name = name.replace("/", "--").replace("\\", "--").strip("-")
 		to = os.path.join(default_dir, name)
 	if not keep_params:
 		to, _, _params = to.partition("?")
@@ -50,7 +52,6 @@ def download(url, keep_params=True, to=None, default_dir="website_html", keep_do
 	if not exists:
 		print("<  "+url)
 		print(">  "+to, flush=True)
-		time.sleep(2) # good bot
 		try:
 			urllib.request.urlretrieve(url, to)
 		except urllib.error.HTTPError as err:
@@ -59,6 +60,7 @@ def download(url, keep_params=True, to=None, default_dir="website_html", keep_do
 				return None, False
 			else:
 				raise err
+		time.sleep(2) # good bot
 	return to, not exists
 
 
@@ -113,7 +115,8 @@ def crawl_album(url, path, indent=""):
 		name = alt.rpartition(".")[0]
 		#img_url_i, img_name_i, img_ext_i = parse_img_page(html_url)
 		img_url_c, img_name_c, img_ext_c = get_img_url(html_url)
-		#if img_url_i is not None and (not img_url_i.startswith(img_url_c) or img_name_i != img_name_c or img_ext_i != img_ext_c):
+		#if img_url_i is not None and (not img_url_i.startswith(img_url_c) \
+		#or img_name_i != img_name_c or img_ext_i != img_ext_c):
 		#	print("%sbug for %s (%s)" % (indent, name, html_url))
 		#	print("%s  indirect: %s.%s (%s)" % (indent, img_name_i, img_ext_i, img_url_i))
 		#	print("%s  converted: %s.%s (%s)" % (indent, img_name_c, img_ext_c, img_url_c))
