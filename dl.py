@@ -1,9 +1,11 @@
 #!/usr/bin/env python3 -u
-import os, io, time
+
+import io, os, sys, time
 import urllib.request, urllib.parse
 import lxml, lxml.html, lxml.etree
 
 html_parser = lxml.etree.HTMLParser(remove_blank_text=True, remove_comments=False, no_network=True)
+base_url = None
 
 
 # extract file name if none from url, and download if it doesn't exist
@@ -37,7 +39,6 @@ def download(url, keep_params=True, to=None, default_dir="website_html", keep_do
 				raise err
 	return to, not exists
 
-base_url = "http://archives.pawpet.tv"
 
 def get_html(url):
 	path, _ = download(url, keep_params=True)
@@ -125,8 +126,24 @@ def crawl_album(url, path, indent=""):
 		crawl_album(next_page, path, indent)
 
 
-try:
-	os.makedirs("website_html", mode=0o755)
-except FileExistsError:
-	pass
-crawl_album(base_url+"/index.php", "")
+if __name__ == "__main__":
+	if len(sys.argv) < 2 or len(sys.argv) > 3 or "--help" in sys.argv or "-h" in sys.argv:
+		print("Usage: %s https://zenphoto.site [target_directory]" % sys.argv[0], file=sys.stderr)
+		sys.exit(1)
+	if len(sys.argv) == 3:
+		os.chdir(sys.argv[2])
+	root_url = sys.argv[1]
+
+	try:
+		os.makedirs("website_html", mode=0o755)
+	except FileExistsError:
+		pass
+
+	if not root_url.startswith("http") and "//" not in root_url:
+		root_url = "http://"+root_url
+	if not root_url.endswith(".php") and "?" not in root_url:
+		if not root_url.endswith("/"):
+			root_url += "/"
+		root_url += "index.php"
+	base_url = root_url.rpartition("/")[0]
+	crawl_album(root_url, "")
