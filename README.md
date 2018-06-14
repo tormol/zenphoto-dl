@@ -1,6 +1,6 @@
 # Zenphoto-downloader
 
-A script for recursively downloading all pictures from [zenphoto](https://www.zenphoto.org)-based^\* photo albums.
+A script for recursively downloading all pictures from [zenphoto](https://www.zenphoto.org)-based<sup>\*</sup> photo albums.
 
 It recreates the folder structure (without pagination) and allways dowloads the
 *original-resolution* version of images.
@@ -9,7 +9,7 @@ resolution.
 Compared to `wget --recursive`, the creatted mirror can be viewed with a file
 explorer instead of a browser.
 
-^\* Developed for and on only tested against one website running version 1.4.5.1
+<sup>\*</sup> Developed for and on only tested against one website running version 1.4.5.1
 
 ## Usage
 
