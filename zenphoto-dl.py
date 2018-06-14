@@ -22,6 +22,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+# directory for caching retrieved webpages
+html_dir = "website_html"
+
+
 import io, os, sys, time
 import urllib.request, urllib.parse
 import lxml, lxml.html, lxml.etree
@@ -33,7 +37,7 @@ base_url = None
 # extract file name if none from url, and download if it doesn't exist
 # returns the download path and whether the file was (successfully) downloaded
 # prints error on 404s, and throws on all other errors
-def download(url, keep_params=True, to=None, default_dir="website_html", keep_domain=False):
+def download(url, keep_params=True, to=None, to_dir=None, keep_domain=False):
 	if to is None:
 		_prot, _, name = url.partition("//") # strip http[s]://
 		#name = url.rsplit("/", 1)[1] # strip path
@@ -42,12 +46,13 @@ def download(url, keep_params=True, to=None, default_dir="website_html", keep_do
 		# remove trailing slash and replace others with --
 		# firefox on linux for some reason treats \ as /, so can't use \ even
 		# if the file system supports it.
-		name = name.replace("/", "--").replace("\\", "--").strip("-")
-		to = os.path.join(default_dir, name)
+		to = name.replace("/", "--").replace("\\", "--").strip("-")
 	if not keep_params:
 		to, _, _params = to.partition("?")
 	else:
 		to = to.replace("?", "-P").replace("&", "-P") # for php -S
+	if to_dir is not None:
+		to = os.path.join(to_dir, to)
 	exists = os.path.isfile(to)
 	if not exists:
 		print("<  "+url)
@@ -65,7 +70,7 @@ def download(url, keep_params=True, to=None, default_dir="website_html", keep_do
 
 
 def get_html(url):
-	path, _ = download(url, keep_params=True)
+	path, _ = download(url, to_dir=html_dir, keep_params=True)
 	html = lxml.html.parse(path, parser=html_parser, base_url=base_url)
 	return html.getroot()
 
@@ -160,7 +165,7 @@ if __name__ == "__main__":
 	root_url = sys.argv[1]
 
 	try:
-		os.makedirs("website_html", mode=0o755)
+		os.makedirs(html_dir, mode=0o755)
 	except FileExistsError:
 		pass
 
