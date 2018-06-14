@@ -25,6 +25,13 @@
 # directory for caching retrieved webpages
 html_dir = "website_html"
 
+# debugging variables:
+# download the html page for each image to check that the conversion from
+# HTML URL to image URL is correct.
+check_img_page = False
+# don't actually download images, to speed up testing of changes
+dry_run = False
+
 
 import io, os, sys, time
 import urllib.request, urllib.parse
@@ -88,6 +95,25 @@ def get_img_url(page_url):
 	return img_url, name, ext
 
 
+def parse_img_page(html_url):
+	html = get_html(html_url)
+	try:
+		img = html.cssselect("#image img")[0]
+		orig_size = html.cssselect("input#sx")[0]# a radio button with onclick
+	except IndexError:
+		print("\tbad indirect page", html_url, flush=True)
+		return None, None, None
+	name = img.get("alt")
+	url = base_url + orig_size.get("url")
+	ext = url.rpartition(".")[2].partition("&")[0]
+	if name.endswith(ext):
+		name = name[:-(len(ext)+1)]
+	#for size in html.cssselect("input"):
+	#	url = size.get("url")
+	#	px = size.get("id").strip("s px")
+	return url, name, ext
+
+
 def parse_index(html):
 	"""returns [{url:,title:,thumb:}], [(url,name)]"""
 	albums = {}
@@ -118,24 +144,25 @@ def crawl_album(url, path, indent=""):
 	for html_url, alt in images:
 		# the alt text only sometimes contain file type, so is not enough on it's own
 		name = alt.rpartition(".")[0]
-		#img_url_i, img_name_i, img_ext_i = parse_img_page(html_url)
 		img_url_c, img_name_c, img_ext_c = get_img_url(html_url)
-		#if img_url_i is not None and (not img_url_i.startswith(img_url_c) \
-		#or img_name_i != img_name_c or img_ext_i != img_ext_c):
-		#	print("%sbug for %s (%s)" % (indent, name, html_url))
-		#	print("%s  indirect: %s.%s (%s)" % (indent, img_name_i, img_ext_i, img_url_i))
-		#	print("%s  converted: %s.%s (%s)" % (indent, img_name_c, img_ext_c, img_url_c))
-		#	os.abort()
+		if check_img_page:
+			img_url_i, img_name_i, img_ext_i = parse_img_page(html_url)
+			if img_url_i is not None and (img_name_i != img_name_c or img_ext_i != img_ext_c):
+				print("%sbug for %s (%s)" % (indent, name, html_url))
+				print("%s  indirect: %s.%s (%s)" % (indent, img_name_i, img_ext_i, img_url_i))
+				print("%s  converted: %s.%s (%s)" % (indent, img_name_c, img_ext_c, img_url_c))
+				sys.exit(2)
 		if alt.endswith("."+img_ext_c):
 			alt = alt[:-(1+len(img_ext_c))]
 		if alt != img_name_c:
-			print("%salt difference: %s != %s" % (indent, alt, img_name_c), flush=True)
-			#os.abort()
-		# img_name_ext is at least unique, and while it might contain noise,
-		# it doesn't crap out completely with $camera_model
+			print("%salt text difference: %s != %s" % (indent, alt, img_name_c), flush=True)
+		# Use the image name because it's guaranteed to be unique.
+		# (alt text somethimes contains less noise, but other times was ust $CAMERA_MODEL)
 		img_path = os.path.join(path, img_name_c+"."+img_ext_c.lower())
-		#print("%s  dry %s" % (indent, img_path))
-		download(img_url_c, to=img_path)
+		if dry_run:
+			print("%s  dry %s" % (indent, img_path))
+		else:
+			download(img_url_c, to=img_path)
 	for album in sub_albums:
 		apath = os.path.join(path, album["title"])
 		try:
